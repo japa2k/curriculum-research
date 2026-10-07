@@ -20,12 +20,19 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError typeMismatch(MethodArgumentTypeMismatchException e) {
-        return new ApiError("invalid value '" + e.getValue() + "' for " + e.getName());
+        // The rejected value is not echoed back: it is caller input, not something we vouch for.
+        return new ApiError("invalid value for " + e.getName());
     }
 
     @ExceptionHandler(UpstreamException.class)
     @ResponseStatus(HttpStatus.BAD_GATEWAY)
     public ApiError upstream(UpstreamException e) {
+        return new ApiError(e.getMessage());
+    }
+
+    @ExceptionHandler(SearchInterruptedException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiError interrupted(SearchInterruptedException e) {
         return new ApiError(e.getMessage());
     }
 }

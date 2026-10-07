@@ -111,3 +111,7 @@ the endpoint returns real, correctly parsed postings for a given search.
   `src/test/resources/linkedin/search-page-java-brazil.html`); the date element's class is
   sometimes `job-search-card__listdate--new`, so the parser selects `time[datetime]`.
 - `location` is trimmed and omitted upstream when blank; `keywords` is sent trimmed.
+- (Review follow-up) `location` is capped at 100 chars after trim, like `keywords` → `400` above
+  that; `remote` accepts only `true`/`false` (case-insensitive), not Spring's `1`/`yes`/`on`.
+- (Review follow-up) A `400` for an unparseable value names the parameter but does not echo the
+  value; an interrupt during the inter-page delay answers `503` with `{"error": ...}`.

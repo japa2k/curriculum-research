@@ -62,7 +62,7 @@ public class JobSearchService {
             Thread.sleep(properties.pageDelay());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while waiting between LinkedIn page requests", e);
+            throw new SearchInterruptedException("search interrupted while waiting between LinkedIn page requests", e);
         }
     }
 }

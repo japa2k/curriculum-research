@@ -11,6 +11,10 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,6 +24,7 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import io.github.luccastk.jobsearch.linkedin.LinkedInGuestClient;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +46,7 @@ import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -67,6 +73,9 @@ class JobSearchApiTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoSpyBean
+    private LinkedInGuestClient client;
 
     // --- Endpoint and parameters
 
@@ -147,6 +156,8 @@ class JobSearchApiTest {
             "keywords=        |                  | keywords",
             "keywords=java    | postedWithin=YEAR | postedWithin",
             "keywords=java    | remote=maybe     | remote",
+            "keywords=java    | remote=1         | remote",
+            "keywords=java    | remote=yes       | remote",
             "keywords=java    | maxResults=0     | maxResults",
             "keywords=java    | maxResults=101   | maxResults",
             "keywords=java    | maxResults=abc   | maxResults",
@@ -175,6 +186,52 @@ class JobSearchApiTest {
 
     static Stream<String> blankOrTooLongKeywords() {
         return Stream.of("   ", "a".repeat(101));
+    }
+
+    @Test
+    void acceptsKeywordsOfExactlyTheMaximumLengthAfterTrim() throws Exception {
+        stubPage(0, "");
+        String keywords = "a".repeat(100);
+
+        mockMvc.perform(get("/api/jobs/search").param("keywords", "  " + keywords + "  "))
+                .andExpect(status().isOk());
+
+        linkedIn.verify(1, getRequestedFor(urlPathEqualTo(SEARCH_PATH))
+                .withQueryParam("keywords", equalTo(keywords)));
+    }
+
+    @Test
+    void rejectsTooLongLocationWithoutCallingLinkedIn() throws Exception {
+        mockMvc.perform(get("/api/jobs/search").param("keywords", "java").param("location", "a".repeat(101)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(containsString("location")));
+
+        linkedIn.verify(0, anyRequestedFor(anyUrl()));
+    }
+
+    @Test
+    void doesNotEchoTheRejectedValueInTheError() throws Exception {
+        mockMvc.perform(get("/api/jobs/search").param("keywords", "java").param("postedWithin", "<script>"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(containsString("postedWithin")))
+                .andExpect(jsonPath("$.error").value(not(containsString("<script>"))));
+    }
+
+    @Test
+    void appliesDefaultsWhenOptionalParametersAreOmitted() throws Exception {
+        stubPage(0, cards(1, 10));
+        stubPage(10, cards(11, 10));
+        stubPage(20, cards(21, 10));
+
+        mockMvc.perform(get("/api/jobs/search").param("keywords", "java"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(25))
+                .andExpect(jsonPath("$.jobs[*].id").value(contains(ids(1, 25))));
+
+        linkedIn.verify(3, getRequestedFor(urlPathEqualTo(SEARCH_PATH))
+                .withQueryParam("location", absent())
+                .withQueryParam("f_TPR", absent())
+                .withQueryParam("f_WT", absent()));
     }
 
     // --- Fetching and pagination
@@ -309,6 +366,27 @@ class JobSearchApiTest {
 
         assertThat(requestedStarts()).containsExactly("0", "10");
         assertThat(warnLines(output)).singleElement().asString().contains("start=10").contains("429");
+    }
+
+    @Test
+    void answersAJsonErrorWhenInterruptedBetweenPages() throws Exception {
+        stubPage(0, cards(1, 10));
+        doAnswer(invocation -> {
+            Object page = invocation.callRealMethod();
+            Thread.currentThread().interrupt();
+            return page;
+        }).when(client).fetchPage(any(), eq(0));
+
+        try {
+            mockMvc.perform(get("/api/jobs/search").param("keywords", "java"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.error").value(containsString("interrupted")));
+        } finally {
+            Thread.interrupted();
+        }
+
+        assertThat(requestedStarts()).containsExactly("0");
     }
 
     // --- Helpers
