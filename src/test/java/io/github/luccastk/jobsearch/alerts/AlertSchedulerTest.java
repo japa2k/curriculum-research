@@ -33,8 +33,7 @@ class AlertSchedulerTest {
     @Test
     void runsTheFirstCycleImmediatelyAndEachNextOneIntervalAfterThePreviousFinished() {
         List<long[]> runs = new CopyOnWriteArrayList<>();
-        long scheduledAt = System.nanoTime();
-        start(() -> {
+        long scheduledAt = start(() -> {
             long begin = System.nanoTime();
             sleep(CYCLE_MS);
             runs.add(new long[] {begin, System.nanoTime()});
@@ -64,11 +63,14 @@ class AlertSchedulerTest {
         assertThat(output.getOut()).contains("database is locked");
     }
 
-    private void start(Runnable cycle) {
+    /** Returns when scheduling began, taken after the thread pool is up so its start-up cost is not counted. */
+    private long start(Runnable cycle) {
         taskScheduler.initialize();
         registrar.setTaskScheduler(taskScheduler);
         new AlertScheduler(cycle, Duration.ofMillis(INTERVAL_MS)).configureTasks(registrar);
+        long scheduledAt = System.nanoTime();
         registrar.afterPropertiesSet();
+        return scheduledAt;
     }
 
     private static long millis(long nanos) {

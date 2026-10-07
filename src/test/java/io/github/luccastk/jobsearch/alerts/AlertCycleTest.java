@@ -13,6 +13,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.spy;
@@ -57,6 +58,7 @@ class AlertCycleTest {
     private static final String TOKEN = "123456:cycle-test-token";
     private static final String SEND_PATH = "/bot" + TOKEN + "/sendMessage";
     private static final long PAGE_DELAY_MS = 200;
+    private static final Duration FAST_SEND_INTERVAL = Duration.ofMillis(10);
     private static final ObjectMapper JSON = new ObjectMapper();
 
     @RegisterExtension
@@ -163,7 +165,8 @@ class AlertCycleTest {
         store.markSeen("0");
         stubSearch("java", cards(1, 3));
 
-        cycle(search("java")).run();
+        new AlertCycle(List.of(search("java")), service, store, telegramClient, Duration.ofMillis(PAGE_DELAY_MS))
+                .run();
 
         List<Long> times = sentInOrder().stream().map(e -> e.getRequest().getLoggedDate().getTime()).toList();
         assertThat(times).hasSize(3);
@@ -178,8 +181,8 @@ class AlertCycleTest {
         SeenJobStore storeSpy = spy(store);
         TelegramClient telegramSpy = spy(telegramClient);
 
-        new AlertCycle(List.of(search("java")), service, storeSpy, telegramSpy, Duration.ofMillis(PAGE_DELAY_MS))
-                .run();
+        new AlertCycle(List.of(search("java")), service, storeSpy, telegramSpy, Duration.ofMillis(PAGE_DELAY_MS),
+                FAST_SEND_INTERVAL).run();
 
         InOrder inOrder = inOrder(storeSpy, telegramSpy);
         inOrder.verify(telegramSpy).sendMessage(contains("Job 1"));
@@ -268,7 +271,7 @@ class AlertCycleTest {
         doThrow(failure).when(serviceSpy).search(argThat(query -> query.keywords().equals("java")));
 
         new AlertCycle(List.of(search("java"), search("kotlin")), serviceSpy, store, telegramClient,
-                Duration.ofMillis(PAGE_DELAY_MS)).run();
+                Duration.ofMillis(PAGE_DELAY_MS), FAST_SEND_INTERVAL).run();
 
         assertThat(sentTexts()).hasSize(1);
         assertThat(alertWarnLines(output)).singleElement().asString().contains("java").contains(failure.getMessage());
@@ -299,10 +302,34 @@ class AlertCycleTest {
                 .contains("messagesSent=2");
     }
 
+    @Test
+    void logsTheSummaryLineWhenInterruptedBetweenSearches(CapturedOutput output) {
+        store.markSeen("0");
+        stubSearch("java", cards(1, 1));
+        stubSearch("kotlin", cards(2, 1));
+        JobSearchService serviceSpy = spy(service);
+        doAnswer(invocation -> {
+            Object result = invocation.callRealMethod();
+            Thread.currentThread().interrupt();
+            return result;
+        }).when(serviceSpy).search(argThat(query -> query.keywords().equals("java")));
+
+        new AlertCycle(List.of(search("java"), search("kotlin")), serviceSpy, store, telegramClient,
+                Duration.ofMillis(PAGE_DELAY_MS), FAST_SEND_INTERVAL).run();
+
+        assertThat(Thread.interrupted()).isTrue();
+        telegram.verify(0, anyRequestedFor(anyUrl()));
+        assertThat(infoLines(output).filter(line -> line.contains("Alert cycle finished")).toList())
+                .singleElement().asString()
+                .contains("searchesRun=1")
+                .contains("messagesSent=0");
+    }
+
     // --- Helpers
 
     private AlertCycle cycle(SearchQuery... searches) {
-        return new AlertCycle(List.of(searches), service, store, telegramClient, Duration.ofMillis(PAGE_DELAY_MS));
+        return new AlertCycle(List.of(searches), service, store, telegramClient, Duration.ofMillis(PAGE_DELAY_MS),
+                FAST_SEND_INTERVAL);
     }
 
     private static SearchQuery search(String keywords) {

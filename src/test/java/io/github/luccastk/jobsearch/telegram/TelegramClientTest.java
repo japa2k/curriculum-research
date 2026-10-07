@@ -68,6 +68,19 @@ class TelegramClientTest {
     }
 
     @Test
+    void includesTelegramsErrorDescriptionOnANon2xxResponse() {
+        stubSend(aResponse().withStatus(400).withHeader("Content-Type", "application/json")
+                .withBody("{\"ok\": false, \"error_code\": 400, "
+                        + "\"description\": \"Bad Request: can't parse entities\"}"));
+
+        assertThatThrownBy(() -> client.sendMessage("hi"))
+                .isInstanceOf(TelegramException.class)
+                .hasMessageContaining("HTTP 400")
+                .hasMessageContaining("Bad Request: can't parse entities")
+                .hasMessageNotContaining(TOKEN);
+    }
+
+    @Test
     void failsWhenTelegramAnswersOkFalse() {
         stubSend(okJson("{\"ok\": false, \"description\": \"Bad Request\"}"));
 

@@ -1,5 +1,8 @@
 package io.github.luccastk.jobsearch.telegram;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.Map;
@@ -15,6 +18,8 @@ import org.springframework.web.util.UriComponentsBuilder;
  * exception or log line from here ever includes the URL or a Spring exception that quotes it.
  */
 public class TelegramClient {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final TelegramProperties properties;
     private final RestClient restClient;
@@ -51,17 +56,28 @@ public class TelegramClient {
                     .retrieve()
                     .onStatus(status -> !status.is2xxSuccessful(), (request, resp) -> {
                         throw new RestClientResponseException("Non-2xx response", resp.getStatusCode(),
-                                resp.getStatusText(), resp.getHeaders(), null, null);
+                                resp.getStatusText(), resp.getHeaders(), resp.getBody().readAllBytes(), null);
                     })
                     .body(Map.class);
         } catch (RestClientResponseException e) {
-            throw new TelegramException("Telegram responded with HTTP " + e.getStatusCode().value());
+            throw new TelegramException("Telegram responded with HTTP " + e.getStatusCode().value()
+                    + description(e.getResponseBodyAsByteArray()));
         } catch (RestClientException e) {
             Throwable cause = e.getCause() == null ? e : e.getCause();
             throw new TelegramException("Telegram request failed: " + cause.getClass().getSimpleName());
         }
         if (response == null || !Boolean.TRUE.equals(response.get("ok"))) {
             throw new TelegramException("Telegram responded with HTTP 200 but ok=false");
+        }
+    }
+
+    /** Telegram's {@code description} (e.g. "Bad Request: can't parse entities") as a ": ..." suffix, or "". */
+    private static String description(byte[] body) {
+        try {
+            JsonNode description = JSON.readTree(body).path("description");
+            return description.isTextual() ? ": " + description.asText() : "";
+        } catch (IOException e) {
+            return "";
         }
     }
 

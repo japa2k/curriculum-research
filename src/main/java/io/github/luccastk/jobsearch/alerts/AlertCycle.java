@@ -27,27 +27,37 @@ public class AlertCycle implements Runnable {
     private final SeenJobStore store;
     private final TelegramClient telegram;
     private final Duration searchDelay;
+    private final Duration sendInterval;
 
     /** @param searchDelay minimum wait between consecutive searches */
     public AlertCycle(List<SearchQuery> searches, JobSearchService service, SeenJobStore store,
             TelegramClient telegram, Duration searchDelay) {
+        this(searches, service, store, telegram, searchDelay, SEND_INTERVAL);
+    }
+
+    /** Tests pass a shorter {@code sendInterval} so multi-message cycles don't sleep a second per message. */
+    AlertCycle(List<SearchQuery> searches, JobSearchService service, SeenJobStore store,
+            TelegramClient telegram, Duration searchDelay, Duration sendInterval) {
         this.searches = List.copyOf(searches);
         this.service = service;
         this.store = store;
         this.telegram = telegram;
         this.searchDelay = searchDelay;
+        this.sendInterval = sendInterval;
     }
 
     @Override
     public void run() {
         boolean seeding = store.isEmpty();
         Map<String, JobPosting> found = new LinkedHashMap<>();
+        int run = 0;
         int failed = 0;
-        for (int i = 0; i < searches.size(); i++) {
-            if (i > 0 && !pause(searchDelay)) {
+        for (SearchQuery search : searches) {
+            if (run > 0 && !pause(searchDelay)) {
+                logSummary(run, failed, found.size(), 0, 0);
                 return;
             }
-            SearchQuery search = searches.get(i);
+            run++;
             try {
                 service.search(search).jobs().forEach(job -> found.putIfAbsent(job.id(), job));
             } catch (RuntimeException e) {
@@ -63,15 +73,19 @@ public class AlertCycle implements Runnable {
         } else {
             sent = send(newJobs);
         }
+        logSummary(run, failed, found.size(), newJobs.size(), sent);
+    }
+
+    private static void logSummary(int run, int failed, int found, int newJobs, int sent) {
         log.info("Alert cycle finished: searchesRun={} searchesFailed={} jobsFound={} newJobs={} messagesSent={}",
-                searches.size(), failed, found.size(), newJobs.size(), sent);
+                run, failed, found, newJobs, sent);
     }
 
     /** Sends in order, marking each job seen as soon as Telegram accepts it; stops at the first failure. */
     private int send(List<JobPosting> jobs) {
         int sent = 0;
         for (JobPosting job : jobs) {
-            if (sent > 0 && !pause(SEND_INTERVAL)) {
+            if (sent > 0 && !pause(sendInterval)) {
                 break;
             }
             try {
