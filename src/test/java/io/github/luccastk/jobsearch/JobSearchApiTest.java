@@ -69,6 +69,8 @@ class JobSearchApiTest {
         registry.add("linkedin.user-agent", () -> USER_AGENT);
         registry.add("linkedin.page-delay", () -> PAGE_DELAY_MS + "ms");
         registry.add("linkedin.timeout", () -> "500ms");
+        // REST-only: no scheduled cycles hitting the LinkedIn stub, no Telegram settings needed.
+        registry.add("alerts.enabled", () -> "false");
     }
 
     @Autowired

@@ -3,3 +3,7 @@ target/
 *.iml
 .idea/
 .vscode/
+
+# Local secrets and the seen-jobs database
+.env
+/data/
