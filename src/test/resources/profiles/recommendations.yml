@@ -1,0 +1,29 @@
+# Small, fixed profile for RecommendationsApiTest: 2 searches × 2 locations = 4 search requests.
+knownSkills: [Java, Node.js, NestJS, React, TypeScript, SQL]
+skillDictionary:
+  - name: Java
+  - name: Node.js
+    aliases: [Node]
+  - name: NestJS
+    aliases: [Nest.js]
+  - name: React
+  - name: TypeScript
+  - name: SQL
+  - name: AWS
+  - name: GraphQL
+  - name: Terraform
+  - name: Kotlin
+  - name: Kubernetes
+searches:
+  - keywords: java developer
+    track: CORE
+  - keywords: kotlin
+    track: BACKEND_JVM
+locations:
+  - location: Brazil
+    remote: true
+  - location: São Paulo, Brazil
+    remote: false
+studyPlan:
+  weeklyHours: 10
+  maxWeeks: 8

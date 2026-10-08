@@ -26,6 +26,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
 import io.github.luccastk.jobsearch.JobSearchService;
 import io.github.luccastk.jobsearch.PostedWithin;
+import io.github.luccastk.jobsearch.RequestPacer;
 import io.github.luccastk.jobsearch.SearchInterruptedException;
 import io.github.luccastk.jobsearch.SearchQuery;
 import io.github.luccastk.jobsearch.linkedin.JobCardParser;
@@ -83,7 +84,7 @@ class AlertCycleTest {
         LinkedInProperties linkedInProperties = new LinkedInProperties(
                 linkedIn.baseUrl(), "TestBrowser/1.0", Duration.ofMillis(PAGE_DELAY_MS), Duration.ofMillis(500));
         service = new JobSearchService(new LinkedInGuestClient(RestClient.builder(), linkedInProperties),
-                new JobCardParser(), linkedInProperties);
+                new JobCardParser(), new RequestPacer(linkedInProperties));
         store = new SeenJobStore(tempDir.resolve("jobs.db").toString());
         telegramClient = new TelegramClient(RestClient.builder(),
                 new TelegramProperties(telegram.baseUrl(), TOKEN, "987654", Duration.ofMillis(500)));

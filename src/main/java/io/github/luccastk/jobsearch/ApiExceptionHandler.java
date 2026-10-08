@@ -1,6 +1,8 @@
 package io.github.luccastk.jobsearch;
 
 import io.github.luccastk.jobsearch.linkedin.UpstreamException;
+import io.github.luccastk.jobsearch.studyplan.JobNotFoundException;
+import io.github.luccastk.jobsearch.studyplan.StudyPlanGenerationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -33,6 +35,18 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SearchInterruptedException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ApiError interrupted(SearchInterruptedException e) {
+        return new ApiError(e.getMessage());
+    }
+
+    @ExceptionHandler(JobNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiError jobNotFound(JobNotFoundException e) {
+        return new ApiError(e.getMessage());
+    }
+
+    @ExceptionHandler(StudyPlanGenerationException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ApiError studyPlanGeneration(StudyPlanGenerationException e) {
         return new ApiError(e.getMessage());
     }
 }

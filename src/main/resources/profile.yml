@@ -1,0 +1,257 @@
+# Search profile used by GET /api/jobs/recommendations and GET /api/jobs/{id}/study-plan.
+# Seeded by hand from the engineer's résumé. Skills and preferences only: never put contact data here.
+#
+# knownSkills      dictionary names the engineer already has (each must exist in skillDictionary)
+# skillDictionary  every skill the matcher can detect; a posting's detected skills that are not in
+#                  knownSkills become its missingSkills. Matching is whole-word and case-insensitive
+#                  unless caseSensitive: true (use it for names that are also common words).
+# searches         one LinkedIn search per (search × location) pair, at most 24 pairs in total.
+#                  Track CORE = a role the résumé already covers; any other track is an adjacent role.
+# studyPlan        the budget every generated study plan must fit.
+
+knownSkills:
+  # Frontend
+  - React
+  - Next.js
+  - TypeScript
+  - JavaScript
+  - Tailwind CSS
+  - Radix UI
+  - Zustand
+  - TanStack Query
+  - React Hook Form
+  - Zod
+  - Tiptap
+  # Backend
+  - Node.js
+  - NestJS
+  - Express
+  - Java
+  - Spring Boot
+  - Spring Security
+  - Spring Cloud
+  - Python
+  - Django
+  - REST
+  - PostgreSQL
+  - SQL
+  - Prisma
+  - Hibernate
+  - Flyway
+  - Kafka
+  - Redis
+  - Microservices
+  - JWT
+  - OAuth
+  - RBAC
+  - Jest
+  - JUnit
+  - OpenAPI
+  - Webhooks
+  # Infrastructure
+  - Docker
+  - CI/CD
+  - GitHub Actions
+  - Git
+  - Cloudflare Workers
+  - Amazon S3
+  # AI
+  - LLM
+
+skillDictionary:
+  # --- Known (from the résumé)
+  - name: React
+    aliases: [React.js, ReactJS]
+  - name: Next.js
+    aliases: [NextJS]
+  - name: TypeScript
+    aliases: [TS]
+    caseSensitive: true
+  - name: JavaScript
+    aliases: [JS, ES6]
+    caseSensitive: true
+  - name: Tailwind CSS
+    aliases: [Tailwind, TailwindCSS]
+  - name: Radix UI
+    aliases: [Radix, shadcn, shadcn/ui]
+  - name: Zustand
+  - name: TanStack Query
+    aliases: [React Query, TanStack]
+  - name: React Hook Form
+  - name: Zod
+  - name: Tiptap
+  - name: Node.js
+    aliases: [Node, NodeJS]
+  - name: NestJS
+    aliases: [Nest.js, Nest]
+  - name: Express
+    aliases: [Express.js, ExpressJS]
+    caseSensitive: true
+  - name: Java
+  - name: Spring Boot
+    aliases: [Spring, Spring Framework, SpringBoot]
+  - name: Spring Security
+  - name: Spring Cloud
+  - name: Python
+  - name: Django
+    aliases: [Django REST Framework, DRF]
+  - name: REST
+    aliases: [RESTful, REST API, REST APIs, APIs REST, API REST]
+  - name: PostgreSQL
+    aliases: [Postgres]
+  - name: SQL
+  - name: Prisma
+  - name: Hibernate
+    aliases: [JPA]
+  - name: Flyway
+  - name: Kafka
+    aliases: [Apache Kafka]
+  - name: Redis
+  - name: Microservices
+    aliases: [microservice, microsserviços, microsserviço, micro-services]
+  - name: JWT
+  - name: OAuth
+    aliases: [OAuth2, OAuth 2.0]
+  - name: RBAC
+  - name: Jest
+  - name: JUnit
+  - name: OpenAPI
+    aliases: [Swagger]
+  - name: Webhooks
+    aliases: [webhook]
+  - name: Docker
+  - name: CI/CD
+    aliases: [CI / CD, CICD]
+  - name: GitHub Actions
+  - name: Git
+  - name: Cloudflare Workers
+    aliases: [Cloudflare]
+  - name: Amazon S3
+    aliases: [S3]
+  - name: LLM
+    aliases: [LLMs, large language models, OpenAI, Claude, GPT]
+
+  # --- Backend / JVM track
+  - name: Kotlin
+  - name: Go
+    aliases: [Golang]
+    caseSensitive: true
+  - name: Rust
+    caseSensitive: true
+  - name: C#
+  - name: .NET
+    aliases: [dotnet]
+  - name: PHP
+  - name: Quarkus
+  - name: Spring WebFlux
+    aliases: [WebFlux, Reactor]
+  - name: gRPC
+  - name: GraphQL
+  - name: RabbitMQ
+  - name: MongoDB
+    aliases: [Mongo]
+  - name: MySQL
+  - name: DynamoDB
+  - name: Elasticsearch
+    aliases: [OpenSearch]
+  - name: DDD
+    aliases: [Domain-Driven Design]
+
+  # --- Frontend / mobile track
+  - name: Angular
+  - name: Vue.js
+    aliases: [Vue, VueJS]
+  - name: React Native
+  - name: Expo
+    caseSensitive: true
+  - name: Flutter
+  - name: Redux
+  - name: Cypress
+  - name: Playwright
+
+  # --- Platform / DevOps track
+  - name: AWS
+    aliases: [Amazon Web Services, EC2, Lambda, ECS, EKS, RDS, SQS, SNS]
+    caseSensitive: true
+  - name: Azure
+  - name: GCP
+    aliases: [Google Cloud, Google Cloud Platform]
+  - name: Kubernetes
+    aliases: [k8s, EKS, GKE, AKS]
+  - name: Terraform
+  - name: Ansible
+  - name: Helm
+    caseSensitive: true
+  - name: Linux
+  - name: Prometheus
+  - name: Grafana
+  - name: OpenTelemetry
+    aliases: [OTel]
+  - name: Datadog
+  - name: Jenkins
+  - name: CircleCI
+  - name: ArgoCD
+    aliases: [Argo CD, GitOps]
+
+  # --- AppSec / DevSecOps track
+  - name: OWASP
+    aliases: [OWASP Top 10]
+  - name: SAST
+  - name: DAST
+  - name: Threat modeling
+    aliases: [threat model, modelagem de ameaças]
+  - name: Pentest
+    aliases: [penetration testing, pentesting, teste de intrusão]
+  - name: Burp Suite
+    aliases: [Burp]
+  - name: SIEM
+  - name: ISO 27001
+  - name: Vault
+    aliases: [HashiCorp Vault]
+    caseSensitive: true
+
+  # --- AI engineering track
+  - name: LangChain
+  - name: LangGraph
+  - name: RAG
+    aliases: [Retrieval-Augmented Generation, retrieval augmented generation]
+    caseSensitive: true
+  - name: Vector databases
+    aliases: [vector database, vector DB, pgvector, Pinecone, Weaviate, Qdrant, Chroma]
+  - name: Embeddings
+  - name: Prompt engineering
+  - name: Fine-tuning
+    aliases: [fine tuning, finetuning]
+  - name: MLOps
+  - name: PyTorch
+  - name: Hugging Face
+    aliases: [HuggingFace]
+
+searches:
+  - keywords: fullstack react node
+    track: CORE
+  - keywords: java spring boot
+    track: CORE
+  - keywords: kotlin backend
+    track: BACKEND_JVM
+  - keywords: devops engineer
+    track: PLATFORM_DEVOPS
+  - keywords: devsecops
+    track: APPSEC_DEVSECOPS
+  - keywords: ai engineer llm
+    track: AI_ENGINEER
+  - keywords: react native
+    track: MOBILE_REACT_NATIVE
+
+locations:
+  - location: Brazil
+    remote: true
+  - location: São Paulo, Brazil
+    remote: false
+  # Remote roles open to Brazilian residents usually list Latin America (English-language postings).
+  - location: Latin America
+    remote: true
+
+studyPlan:
+  weeklyHours: 10
+  maxWeeks: 8

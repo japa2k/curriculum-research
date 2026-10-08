@@ -2,7 +2,6 @@ package io.github.luccastk.jobsearch;
 
 import io.github.luccastk.jobsearch.linkedin.JobCardParser;
 import io.github.luccastk.jobsearch.linkedin.LinkedInGuestClient;
-import io.github.luccastk.jobsearch.linkedin.LinkedInProperties;
 import io.github.luccastk.jobsearch.linkedin.UpstreamException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,12 +16,12 @@ public class JobSearchService {
 
     private final LinkedInGuestClient client;
     private final JobCardParser parser;
-    private final LinkedInProperties properties;
+    private final RequestPacer pacer;
 
-    public JobSearchService(LinkedInGuestClient client, JobCardParser parser, LinkedInProperties properties) {
+    public JobSearchService(LinkedInGuestClient client, JobCardParser parser, RequestPacer pacer) {
         this.client = client;
         this.parser = parser;
-        this.properties = properties;
+        this.pacer = pacer;
     }
 
     /**
@@ -35,7 +34,7 @@ public class JobSearchService {
         int start = 0;
         for (int page = 0; page < MAX_PAGES && jobsById.size() < query.maxResults(); page++) {
             if (page > 0) {
-                pause();
+                pacer.pause();
             }
             JobCardParser.Page parsed;
             try {
@@ -55,14 +54,5 @@ public class JobSearchService {
         }
         List<JobPosting> jobs = jobsById.values().stream().limit(query.maxResults()).toList();
         return new SearchResponse(jobs.size(), partial, jobs);
-    }
-
-    private void pause() {
-        try {
-            Thread.sleep(properties.pageDelay());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new SearchInterruptedException("search interrupted while waiting between LinkedIn page requests", e);
-        }
     }
 }

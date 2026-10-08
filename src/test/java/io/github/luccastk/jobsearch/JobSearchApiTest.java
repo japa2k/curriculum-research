@@ -317,6 +317,17 @@ class JobSearchApiTest {
 
     // --- Upstream failures
 
+    @Test
+    void doesNotEchoTheSearchInTheUpstreamError() throws Exception {
+        linkedIn.stubFor(WireMock.get(urlPathEqualTo(SEARCH_PATH)).willReturn(aResponse().withStatus(429)));
+
+        mockMvc.perform(get("/api/jobs/search").param("keywords", "<script>").param("location", "<img>"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error").value(containsString("429")))
+                .andExpect(jsonPath("$.error").value(not(containsString("<script>"))))
+                .andExpect(jsonPath("$.error").value(not(containsString("<img>"))));
+    }
+
     @ParameterizedTest
     @CsvSource({"302", "429", "503", "999"})
     void answers502WhenTheFirstPageFails(int upstreamStatus, CapturedOutput output) throws Exception {
