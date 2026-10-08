@@ -1,5 +1,7 @@
 package io.github.luccastk.jobsearch.alerts;
 
+import static io.github.luccastk.jobsearch.telegram.TelegramHtml.escape;
+
 import io.github.luccastk.jobsearch.JobPosting;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +31,5 @@ final class JobMessage {
             lines.add(escape(job.url()));
         }
         return String.join("\n", lines);
-    }
-
-    private static String escape(String text) {
-        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }

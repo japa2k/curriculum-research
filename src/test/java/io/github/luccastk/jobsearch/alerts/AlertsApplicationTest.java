@@ -1,7 +1,6 @@
 package io.github.luccastk.jobsearch.alerts;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
@@ -18,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -34,6 +35,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /** The whole application with alerts enabled; LinkedIn and Telegram are WireMock stubs. */
 @SpringBootTest
+// Closes the context afterwards, so its Telegram poller does not outlive the WireMock servers.
+@DirtiesContext
 @AutoConfigureMockMvc
 class AlertsApplicationTest {
 
@@ -66,6 +69,8 @@ class AlertsApplicationTest {
         registry.add("alerts.interval", () -> "1h");
         registry.add("alerts.db-path", () -> dataDir.resolve("db/jobs.db").toString());
         registry.add("alerts.searches[0].keywords", () -> "java");
+        registry.add("resume.base-path", () -> resource("/resume/resume-base.md"));
+        registry.add("resume.applications-dir", () -> dataDir.resolve("applications").toString());
     }
 
     /** Stubs exist before the context starts, because the first cycle runs right at startup. */
@@ -91,7 +96,9 @@ class AlertsApplicationTest {
         assertThat(dataDir.resolve("db/jobs.db")).exists();
         assertThat(store.contains("1")).isTrue();
         assertThat(store.contains("2")).isTrue();
-        telegram.verify(0, anyRequestedFor(anyUrl()));
+        // The button's poller long-polls getUpdates from startup; nothing else may reach Telegram.
+        assertThat(telegram.getAllServeEvents()).extracting(e -> e.getRequest().getUrl())
+                .allMatch(url -> url.endsWith("/getUpdates"));
     }
 
     @Test
@@ -116,6 +123,14 @@ class AlertsApplicationTest {
                 .withQueryParam("keywords", equalTo(keywords))
                 .withQueryParam("start", equalTo("0"))
                 .willReturn(aResponse().withStatus(200).withBody(html)));
+    }
+
+    private static String resource(String name) {
+        try {
+            return Path.of(AlertsApplicationTest.class.getResource(name).toURI()).toString();
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private static String cards(int firstId, int count) {

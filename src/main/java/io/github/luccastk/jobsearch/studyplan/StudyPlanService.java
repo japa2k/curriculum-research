@@ -13,7 +13,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class StudyPlanService {
 
-    private static final String JOB_URL = "https://www.linkedin.com/jobs/view/";
+    public static final String JOB_URL = "https://www.linkedin.com/jobs/view/";
+
+    /** A posting's detail page, which always has a description, and its score against the profile. */
+    public record ScoredPosting(JobDetail detail, PostingScorer.Score score) {
+    }
 
     private final LinkedInGuestClient client;
     private final JobDetailParser parser;
@@ -36,12 +40,9 @@ public class StudyPlanService {
      * @throws StudyPlanGenerationException when the CLI fails
      */
     public StudyPlan generate(String jobId) {
-        JobDetail detail = parser.parse(fetchDetail(jobId));
-        if (detail.description() == null) {
-            throw new UpstreamException("LinkedIn detail page for job " + jobId + " has no description", null);
-        }
-        String title = detail.title() == null ? "" : detail.title();
-        PostingScorer.Score score = scorer.score(title, detail);
+        ScoredPosting posting = read(jobId);
+        JobDetail detail = posting.detail();
+        PostingScorer.Score score = posting.score();
         Profile.StudyPlanSettings budget = profile.studyPlan();
         String plan = cli.run(StudyPlanPrompt.build(detail, profile.knownSkills(), score.skills().missingSkills(),
                 budget));
@@ -56,6 +57,21 @@ public class StudyPlanService {
                 budget.weeklyHours(),
                 budget.maxWeeks(),
                 plan);
+    }
+
+    /**
+     * Fetches and scores one posting the way {@link #generate} does, without running the CLI.
+     *
+     * @throws JobNotFoundException when LinkedIn answers 404 for the posting
+     * @throws UpstreamException    when the detail request fails otherwise or the page has no description
+     */
+    public ScoredPosting read(String jobId) {
+        JobDetail detail = parser.parse(fetchDetail(jobId));
+        if (detail.description() == null) {
+            throw new UpstreamException("LinkedIn detail page for job " + jobId + " has no description", null);
+        }
+        String title = detail.title() == null ? "" : detail.title();
+        return new ScoredPosting(detail, scorer.score(title, detail));
     }
 
     private String fetchDetail(String jobId) {

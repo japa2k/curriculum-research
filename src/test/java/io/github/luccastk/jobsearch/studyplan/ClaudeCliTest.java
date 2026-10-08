@@ -67,6 +67,7 @@ class ClaudeCliTest {
 
             long started = System.nanoTime();
             assertThatThrownBy(() -> cli.run("prompt"))
+                    .isInstanceOf(ClaudeCliBusyException.class)
                     .isInstanceOf(StudyPlanGenerationException.class)
                     .hasMessageContaining("busy");
             assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(2));

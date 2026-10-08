@@ -4,19 +4,22 @@ A small Java 21 / Spring Boot 3 service that fetches job postings from LinkedIn'
 unauthenticated "jobs-guest" endpoint. It does three things:
 
 - **Telegram alerts** — every hour it runs a configured list of searches and sends each job it has
-  not seen before to your Telegram chat, once.
+  not seen before to your Telegram chat, once. Each alert has a **📄 Gerar currículo** button that
+  sends back a résumé tailored to that job, a study plan and a portfolio project.
 - **REST API** — serves searches as JSON on demand. No LinkedIn login or API key is needed.
 - **Recommendations** — ranks postings against your profile, including roles adjacent to it, and
   writes study plans for them through the local Claude Code CLI.
 
 Full contracts: [`specs/linkedin-guest-job-search.md`](specs/linkedin-guest-job-search.md) (fetching
 and the API), [`specs/telegram-job-alerts.md`](specs/telegram-job-alerts.md) (alerts) and
-[`specs/profile-job-recommendations.md`](specs/profile-job-recommendations.md) (recommendations).
+[`specs/profile-job-recommendations.md`](specs/profile-job-recommendations.md) (recommendations) and
+[`specs/telegram-tailored-resume.md`](specs/telegram-tailored-resume.md) (the résumé button).
 
 ## Requirements
 
 - JDK 21
-- For study plans only: [Claude Code](https://claude.com/claude-code) installed and logged in
+- For study plans and the résumé button: [Claude Code](https://claude.com/claude-code) installed and
+  logged in
 
 Maven is not required: the repo ships the Maven wrapper (`mvnw` / `mvnw.cmd`).
 
@@ -78,8 +81,8 @@ java -jar target/job-search-0.0.1-SNAPSHOT.jar
 ./mvnw test
 ```
 
-Tests never hit the real LinkedIn or Telegram: the parser runs against saved HTML fixtures and
-HTTP behavior against WireMock stubs. They run in `target/test-workdir`, so they never read your
+Tests never hit the real LinkedIn, Telegram or Claude CLI: the parser runs against saved HTML
+fixtures, HTTP behavior against WireMock stubs, and the CLI is a fake Java process. They run in `target/test-workdir`, so they never read your
 `.env`.
 
 ## API
@@ -212,6 +215,57 @@ alerts:
 Each search takes the same parameters, defaults and limits as the REST API below
 (`keywords` required; `location`, `postedWithin`, `remote`, `maxResults` optional).
 
+## Tailored résumé button
+
+Every alert carries a **📄 Gerar currículo** button. Pressing it makes the bot read the posting, score
+it against `profile.yml`, and ask the local Claude Code CLI for three documents, which it sends to
+the chat and saves on disk:
+
+| File                  | What it is                                                            |
+|-----------------------|-----------------------------------------------------------------------|
+| `curriculo.docx`      | Your base résumé reordered and reworded toward the posting's keywords, in the posting's language (English posting → English résumé, otherwise Portuguese). ATS-friendly: one column, no tables, images, headers or footers. Sent as `curriculo-<company>-<jobId>.docx`. |
+| `plano-de-estudos.md` | A week-by-week study plan for the skills the posting asks for that you lack, within `studyPlan` in `profile.yml`. |
+| `projeto.md`          | One portfolio project that exercises those skills, with talking points for the recruiter. |
+
+The résumé keeps your name and contact data as they are and never adds an employer, title, date,
+degree, certification or metric that is not in your base résumé. It does list the posting's missing
+skills (the ones the study plan covers) and the project as normal entries, with the project dated
+only with the current year: build them before you interview. Edit the `.docx` by hand if you want.
+
+**Creating the base résumé.** Write your résumé in Markdown at `data/resume-base.md` (relative to the
+directory you run the app from; `data/` is gitignored, so it is never committed). Use `#` for your
+name, a line with your contact data, `##` for each section and `-` for items, for example:
+
+```markdown
+# Your Name
+you@example.com | +55 11 90000-0000 | São Paulo, SP | linkedin.com/in/you
+
+## Experience
+### Backend Developer — Acme (2023–2025)
+- Built REST APIs in Java and Spring Boot
+```
+
+While alerts are enabled the app refuses to start, naming `resume.base-path`, if this file is missing
+or blank.
+
+**How a press is handled.**
+
+- The bot answers the press at once and replies `Gerando currículo, plano de estudos e projeto para
+  <title> — <company>…`. Generating takes one CLI run (up to `claude-cli.timeout`).
+- **Saved applications** go to `data/applications/<jobId>/` (the three files), plus a row in the
+  `application` table of `alerts.db-path` (job id, title, company, URL, generation time). Pressing the
+  button again for that job resends the saved files without running the CLI or calling LinkedIn; if a
+  saved file was deleted, the job is generated again. Delete the folder to regenerate on purpose.
+- Only presses from `TELEGRAM_CHAT_ID` are honored; anything from another chat is ignored and logged
+  as one WARN line.
+- A second press while a job is still generating gets `Já estou gerando esse currículo, aguarde.`
+- Failures are replied in the chat and save nothing: the posting is gone (LinkedIn 404), LinkedIn
+  could not be read, the CLI is busy (`claude-cli.max-concurrent-runs` runs already going — there is
+  no queue, press again later) or failed. If sending a file fails, the saved files stay and the next
+  press resends them.
+- Presses are read by long-polling Telegram's `getUpdates`, so no public URL or webhook is needed.
+  Do not run two copies of the app with the same bot: Telegram hands each press to only one of them.
+
 ## Configuration
 
 Set in `src/main/resources/application.yml` (or override with environment variables / `--` args,
@@ -233,3 +287,5 @@ e.g. `--linkedin.page-delay=2s`):
 | `alerts.db-path`      | `./data/jobs.db`           | SQLite file of seen jobs        |
 | `alerts.searches`     | one example search         | Searches run each cycle         |
 | `telegram.base-url`   | `https://api.telegram.org` | Telegram Bot API host           |
+| `resume.base-path`    | `./data/resume-base.md`    | Your base résumé (Markdown); required while alerts are enabled |
+| `resume.applications-dir` | `./data/applications`  | Where each job's generated files are saved |

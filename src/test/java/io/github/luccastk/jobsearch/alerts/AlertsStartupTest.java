@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import io.github.luccastk.jobsearch.JobSearchApplication;
 import io.github.luccastk.jobsearch.PostedWithin;
+import io.github.luccastk.jobsearch.resume.ResumeProperties;
+import io.github.luccastk.jobsearch.telegram.CallbackPoller;
 import io.github.luccastk.jobsearch.telegram.TelegramProperties;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -59,6 +61,40 @@ class AlertsStartupTest {
         assertThatThrownBy(() -> runWithAlerts("--telegram.bot-token=" + TOKEN, "--telegram.chat-id=1",
                 "--alerts.searches[0].keywords=java", "--alerts.searches[0].postedWithin=YEAR"))
                 .satisfies(e -> assertThat(messages(e)).anyMatch(m -> m.contains("alerts.searches[0].posted-within")));
+    }
+
+    @Test
+    void failsAtStartupNamingTheBaseResumeWhenItIsMissing() {
+        assertThatThrownBy(() -> runWithAlerts("--telegram.bot-token=" + TOKEN, "--telegram.chat-id=1",
+                "--resume.base-path=" + tempDir.resolve("no-such-resume.md")))
+                .satisfies(e -> assertThat(messages(e)).anyMatch(m -> m.contains("resume.base-path")));
+    }
+
+    @Test
+    void failsAtStartupNamingTheBaseResumeWhenItIsBlank() throws IOException {
+        Path blank = Files.writeString(tempDir.resolve("resume-base.md"), "  \n\t\n");
+
+        assertThatThrownBy(() -> runWithAlerts("--telegram.bot-token=" + TOKEN, "--telegram.chat-id=1",
+                "--resume.base-path=" + blank))
+                .satisfies(e -> assertThat(messages(e)).anyMatch(m -> m.contains("resume.base-path")));
+    }
+
+    @Test
+    void neitherPollsTelegramNorRequiresTheBaseResumeWhenAlertsAreDisabled() {
+        try (ConfigurableApplicationContext context = run("--alerts.enabled=false",
+                "--resume.base-path=" + tempDir.resolve("no-such-resume.md"))) {
+            assertThat(context.getBeansOfType(CallbackPoller.class)).isEmpty();
+        }
+    }
+
+    @Test
+    void shipsTheDocumentedResumeDefaults() {
+        try (ConfigurableApplicationContext context = run("--alerts.enabled=false")) {
+            ResumeProperties resume = context.getBean(ResumeProperties.class);
+
+            assertThat(resume.basePath()).isEqualTo("./data/resume-base.md");
+            assertThat(resume.applicationsDir()).isEqualTo("./data/applications");
+        }
     }
 
     @Test

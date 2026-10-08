@@ -44,13 +44,15 @@ public class ClaudeCli {
 
     /**
      * @return the CLI's stdout, trimmed
-     * @throws StudyPlanGenerationException when every run slot is busy, or the CLI cannot start, exits
-     *                                      non-zero, times out or prints nothing
+     * @throws ClaudeCliBusyException       when every run slot is busy
+     * @throws StudyPlanGenerationException when the CLI cannot start, exits non-zero, times out or prints nothing
      */
     public String run(String prompt) {
         if (!runSlots.tryAcquire()) {
-            throw failure("Claude CLI is busy; at most " + properties.maxConcurrentRuns()
-                    + " study plans are generated at once", "", null);
+            String message = "Claude CLI is busy; at most " + properties.maxConcurrentRuns()
+                    + " study plans are generated at once";
+            log.warn(message);
+            throw new ClaudeCliBusyException(message);
         }
         try {
             return runProcess(prompt);

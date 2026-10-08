@@ -3,6 +3,7 @@ package io.github.luccastk.jobsearch.alerts;
 import io.github.luccastk.jobsearch.JobPosting;
 import io.github.luccastk.jobsearch.JobSearchService;
 import io.github.luccastk.jobsearch.SearchQuery;
+import io.github.luccastk.jobsearch.resume.ResumeButton;
 import io.github.luccastk.jobsearch.telegram.TelegramClient;
 import io.github.luccastk.jobsearch.telegram.TelegramException;
 import java.time.Duration;
@@ -89,7 +90,7 @@ public class AlertCycle implements Runnable {
                 break;
             }
             try {
-                telegram.sendMessage(JobMessage.format(job));
+                telegram.sendMessage(JobMessage.format(job), ResumeButton.forJob(job.id()));
             } catch (TelegramException e) {
                 log.warn("Telegram sendMessage failed for job {}: {}; remaining jobs retry next cycle",
                         job.id(), e.getMessage());

@@ -11,6 +11,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doAnswer;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.spy;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
 import com.github.tomakehurst.wiremock.http.Fault;
@@ -140,6 +142,18 @@ class AlertCycleTest {
     }
 
     @Test
+    void attachesTheResumeButtonForThatJobToEveryAlert() {
+        store.markSeen("1");
+        stubSearch("java", cards(2, 2));
+
+        cycle(search("java")).run();
+
+        assertThat(sentInOrder()).extracting(AlertCycleTest::keyboard).containsExactly(
+                "1 row(s), 1 button(s): 📄 Gerar currículo | resume:2",
+                "1 row(s), 1 button(s): 📄 Gerar currículo | resume:3");
+    }
+
+    @Test
     void sendsAJobMatchedByTwoSearchesOnlyOnce() {
         store.markSeen("0");
         stubSearch("java", cards(5, 1));
@@ -186,9 +200,9 @@ class AlertCycleTest {
                 FAST_SEND_INTERVAL).run();
 
         InOrder inOrder = inOrder(storeSpy, telegramSpy);
-        inOrder.verify(telegramSpy).sendMessage(contains("Job 1"));
+        inOrder.verify(telegramSpy).sendMessage(contains("Job 1"), any());
         inOrder.verify(storeSpy).markSeen("1");
-        inOrder.verify(telegramSpy).sendMessage(contains("Job 2"));
+        inOrder.verify(telegramSpy).sendMessage(contains("Job 2"), any());
         inOrder.verify(storeSpy).markSeen("2");
     }
 
@@ -376,6 +390,25 @@ class AlertCycleTest {
     private static String text(ServeEvent event) {
         try {
             return JSON.readTree(event.getRequest().getBodyAsString()).get("text").asText();
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** The inline keyboard as "rows x buttons: text | callback_data" of each button, independent of key order. */
+    private static String keyboard(ServeEvent event) {
+        try {
+            JsonNode rows = JSON.readTree(event.getRequest().getBodyAsString()).path("reply_markup")
+                    .path("inline_keyboard");
+            StringBuilder description = new StringBuilder(rows.size() + " row(s)");
+            for (JsonNode row : rows) {
+                description.append(", ").append(row.size()).append(" button(s)");
+                for (JsonNode button : row) {
+                    description.append(": ").append(button.path("text").asText())
+                            .append(" | ").append(button.path("callback_data").asText());
+                }
+            }
+            return description.toString();
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
