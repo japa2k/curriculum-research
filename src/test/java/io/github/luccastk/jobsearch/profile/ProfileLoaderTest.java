@@ -75,6 +75,8 @@ class ProfileLoaderTest {
             "track: CORE                                               | 'track: \" \"'                     | track",
             "keywords: java developer                                  | 'keywords: \"\"'                   | keywords",
             "location: Brazil                                          | 'location: \"\"'                   | location",
+            "aliases: [Golang]                                         | 'aliases: [Golang, \" \"]'         | aliases",
+            "- name: Go                                                | '- name: Java'                     | duplicate",
     })
     void failsNamingTheInvalidPart(String original, String replacement, String named) {
         String yaml = VALID.replace(original.replace("\\n", "\n"), replacement.replace("\\n", "\n"));

@@ -15,15 +15,24 @@ class ClaudeCliDefaultsTest {
 
     @Test
     void runsClaudeInPrintModeWithToolsDisabledAndAThreeMinuteTimeout() throws IOException {
-        var sources = new YamlPropertySourceLoader().load("application", new ClassPathResource("application.yml"));
-        ClaudeCliProperties properties = new Binder(ConfigurationPropertySources.from(sources))
-                .bind("claude-cli", ClaudeCliProperties.class)
-                .get();
+        ClaudeCliProperties properties = defaults();
 
         assertThat(properties.command()).isEqualTo("claude");
         assertThat(properties.timeout()).isEqualTo(Duration.ofSeconds(180));
         assertThat(properties.args()).containsSubsequence("-p")
                 .containsSubsequence("--tools", "")
                 .contains("--strict-mcp-config", "--no-session-persistence");
+    }
+
+    @Test
+    void allowsAtMostTwoConcurrentRuns() throws IOException {
+        assertThat(defaults().maxConcurrentRuns()).isEqualTo(2);
+    }
+
+    private static ClaudeCliProperties defaults() throws IOException {
+        var sources = new YamlPropertySourceLoader().load("application", new ClassPathResource("application.yml"));
+        return new Binder(ConfigurationPropertySources.from(sources))
+                .bind("claude-cli", ClaudeCliProperties.class)
+                .get();
     }
 }

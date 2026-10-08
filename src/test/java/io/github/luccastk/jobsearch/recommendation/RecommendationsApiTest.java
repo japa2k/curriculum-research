@@ -357,6 +357,18 @@ class RecommendationsApiTest {
         linkedIn.verify(0, getRequestedFor(urlPathMatching(DETAIL_PATH + ".*")));
     }
 
+    @Test
+    void answers502NamingTheTimeoutWhenEverySearchTimesOut() throws Exception {
+        linkedIn.stubFor(WireMock.get(urlPathEqualTo(SEARCH_PATH))
+                .willReturn(html("").withFixedDelay(1500)));
+
+        mockMvc.perform(get("/api/jobs/recommendations"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error").value(containsString("timeout after 500 ms")));
+
+        linkedIn.verify(0, getRequestedFor(urlPathMatching(DETAIL_PATH + ".*")));
+    }
+
     // --- Helpers
 
     private static MappingBuilder searchFor(String keywords, String location) {

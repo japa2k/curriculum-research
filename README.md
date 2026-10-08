@@ -130,8 +130,8 @@ that fits `studyPlan` in `profile.yml` (10 h/week, at most 8 weeks). It takes te
 ```
 
 Errors: `400` (id not 1–20 digits), `404` (LinkedIn has no such posting), `502` (detail request
-failed or the page has no description), `503` (the CLI could not start, failed, printed nothing or
-took longer than `claude-cli.timeout`). The CLI must be installed and logged in on this machine.
+failed or the page has no description), `503` (the CLI is busy with `claude-cli.max-concurrent-runs`
+plans, could not start, failed, printed nothing or took longer than `claude-cli.timeout`). The CLI must be installed and logged in on this machine.
 
 ### Profile
 
@@ -155,3 +155,4 @@ e.g. `--linkedin.page-delay=2s`):
 | `claude-cli.command`  | `claude`                   | CLI executable; on Windows a bare name also finds `claude.cmd`/`.exe` on the PATH |
 | `claude-cli.args`     | `-p --output-format text --tools "" --strict-mcp-config --no-session-persistence` | Fixed arguments; tools and MCP servers are off because job descriptions are untrusted |
 | `claude-cli.timeout`  | `180s`                     | Kill the CLI after this long    |
+| `claude-cli.max-concurrent-runs` | `2`             | CLI processes allowed at once; further study-plan requests get `503` |

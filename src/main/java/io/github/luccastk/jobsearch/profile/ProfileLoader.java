@@ -71,7 +71,13 @@ public final class ProfileLoader {
         Set<String> dictionary = new HashSet<>();
         for (SkillDefinition skill : orEmpty(profile.skillDictionary())) {
             requireText(skill.name(), "skillDictionary name");
-            dictionary.add(skill.name());
+            if (!dictionary.add(skill.name())) {
+                throw new InvalidProfileException("profile skillDictionary has a duplicate name '" + skill.name() + "'");
+            }
+            // A blank alias would compile to an empty alternative that matches every posting.
+            for (String alias : skill.aliases()) {
+                requireText(alias, "skillDictionary '" + skill.name() + "' aliases entry");
+            }
         }
         for (String skill : orEmpty(profile.knownSkills())) {
             if (!dictionary.contains(skill)) {

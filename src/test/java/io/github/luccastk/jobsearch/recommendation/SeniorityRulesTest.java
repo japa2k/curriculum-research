@@ -2,6 +2,8 @@ package io.github.luccastk.jobsearch.recommendation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Locale;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -49,5 +51,16 @@ class SeniorityRulesTest {
     })
     void classifiesFromTitleFirstThenTheSeniorityCriterion(String title, String criterion, Seniority expected) {
         assertThat(SeniorityRules.classify(title, criterion)).isEqualTo(expected);
+    }
+
+    @Test
+    void readsTheSeniorityCriterionRegardlessOfTheDefaultLocale() {
+        Locale original = Locale.getDefault();
+        Locale.setDefault(Locale.forLanguageTag("tr-TR")); // lower-cases "I" to a dotless "ı"
+        try {
+            assertThat(SeniorityRules.classify("Fullstack Developer", "Internship")).isEqualTo(Seniority.JUNIOR);
+        } finally {
+            Locale.setDefault(original);
+        }
     }
 }

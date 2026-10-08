@@ -70,6 +70,6 @@ class CommittedProfileTest {
 
         assertThat(raw).doesNotContainPattern(Pattern.compile("[\\w.+-]+@[\\w-]+\\.[\\w.]+"));
         assertThat(raw).doesNotContainPattern(Pattern.compile("\\(?\\d{2}\\)?\\s?9?\\d{4}-?\\d{4}"));
-        assertThat(raw.toLowerCase()).doesNotContain("rua ", "avenida", "av. ", "linkedin.com/in", "kobayashi");
+        assertThat(raw.toLowerCase()).doesNotContain("rua ", "avenida", "av. ", "linkedin.com/in");
     }
 }

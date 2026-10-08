@@ -1,6 +1,7 @@
 package io.github.luccastk.jobsearch.recommendation;
 
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /** Seniority read from a posting's title, falling back to LinkedIn's "Seniority level" criterion. */
@@ -31,7 +32,7 @@ public final class SeniorityRules {
         if (seniorityLevelCriterion == null) {
             return Seniority.UNKNOWN;
         }
-        return switch (seniorityLevelCriterion.trim().toLowerCase()) {
+        return switch (seniorityLevelCriterion.trim().toLowerCase(Locale.ROOT)) {
             case "internship", "entry level" -> Seniority.JUNIOR;
             case "associate" -> Seniority.PLENO;
             default -> Seniority.UNKNOWN;
