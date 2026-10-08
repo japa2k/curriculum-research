@@ -13,6 +13,11 @@ import java.util.List;
  * Stand-in for the Claude CLI, run as a real child process: {@code java -cp <test-classes> FakeClaude <mode> ...}.
  * Modes: {@code echo} prints its arguments and stdin; {@code fail} exits 3; {@code empty} prints only
  * whitespace; {@code sleep <pidFile>} writes its pid to the file and sleeps for a minute.
+ *
+ * <p>Mode {@code documents} answers an application prompt with the three marked documents; the résumé is the
+ * base résumé found in the prompt plus a project entry. A directive in the posting changes the answer:
+ * {@code FAKE_FAIL} exits 3, {@code FAKE_EMPTY} prints only whitespace, {@code FAKE_GARBAGE} prints text without
+ * markers, {@code FAKE_SLEEP} sleeps for a minute and {@code FAKE_SLOW} answers after two seconds.
  */
 public final class FakeClaude {
 
@@ -36,6 +41,7 @@ public final class FakeClaude {
                 System.in.readAllBytes();
                 out.print("  \n ");
             }
+            case "documents" -> documents(out, new String(System.in.readAllBytes(), StandardCharsets.UTF_8));
             case "sleep" -> {
                 Files.writeString(Path.of(args[1]), String.valueOf(ProcessHandle.current().pid()));
                 Thread.sleep(60_000);
@@ -44,8 +50,29 @@ public final class FakeClaude {
         }
     }
 
+    private static void documents(PrintStream out, String prompt) throws InterruptedException {
+        if (prompt.contains("FAKE_FAIL")) {
+            System.exit(3);
+        } else if (prompt.contains("FAKE_EMPTY")) {
+            out.print("  \n ");
+        } else if (prompt.contains("FAKE_GARBAGE")) {
+            out.print("Desculpe, não sei separar em documentos.");
+        } else if (prompt.contains("FAKE_SLEEP")) {
+            Thread.sleep(60_000);
+        } else {
+            if (prompt.contains("FAKE_SLOW")) {
+                Thread.sleep(2_000);
+            }
+            String base = prompt.substring(prompt.indexOf("<curriculo_base>") + "<curriculo_base>".length(),
+                    prompt.indexOf("</curriculo_base>")).strip();
+            out.print("Aqui estão os documentos.\n===CURRICULO===\n" + base + "\n## Projetos\n- Projeto Fake (2026)\n"
+                    + "===PLANO_DE_ESTUDOS===\n# Plano Fake\n- Semana 1: AWS\n"
+                    + "===PROJETO===\n# Projeto Fake\n- Stack: AWS\n");
+        }
+    }
+
     /** The {@code java} command plus arguments that run this class in the given mode. */
-    static List<String> command(String... modeAndArgs) {
+    public static List<String> command(String... modeAndArgs) {
         String javaBinary = ProcessHandle.current().info().command().orElseThrow();
         String classes;
         try {

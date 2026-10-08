@@ -1,5 +1,5 @@
 # Tailored résumé, study plan and project from a Telegram button
-status: todo
+status: done
 created: 2026-10-08
 
 ## Goal
@@ -48,33 +48,33 @@ nothing.
 ## Acceptance criteria
 
 ### Alert message button
-- The system shall attach to every alert message an inline keyboard with exactly one button,
+- [x] The system shall attach to every alert message an inline keyboard with exactly one button,
   labeled `📄 Gerar currículo`, whose `callback_data` identifies the posting's job id (≤ 64 bytes).
-- The alert message text shall stay as `JobMessage.format` produces it today.
+- [x] The alert message text shall stay as `JobMessage.format` produces it today.
 
 ### Receiving taps
-- While alerts are enabled, the system shall long-poll Telegram `getUpdates` for `callback_query`
+- [x] While alerts are enabled, the system shall long-poll Telegram `getUpdates` for `callback_query`
   updates continuously, independently of the alert cycle, so a tap is handled even while a cycle
   is running or waiting for its next interval.
-- The system shall acknowledge each update it processes (advance the `offset`), so a handled tap is
+- [x] The system shall acknowledge each update it processes (advance the `offset`), so a handled tap is
   never handled again in the same run.
-- If a `callback_query` comes from a chat whose id is not `TELEGRAM_CHAT_ID`, then the system shall
+- [x] If a `callback_query` comes from a chat whose id is not `TELEGRAM_CHAT_ID`, then the system shall
   not generate, send or save anything for it, and shall log one WARN line without the update's
   content.
-- If an update is not a `callback_query` (e.g. a text message, from any chat), then the system shall
+- [x] If an update is not a `callback_query` (e.g. a text message, from any chat), then the system shall
   ignore it.
-- If a `callback_query`'s data is not a valid button payload, then the system shall answer it with
+- [x] If a `callback_query`'s data is not a valid button payload, then the system shall answer it with
   `Botão inválido.` and do nothing else.
-- When an authorized tap is received, the system shall call `answerCallbackQuery` within 5 seconds
+- [x] When an authorized tap is received, the system shall call `answerCallbackQuery` within 5 seconds
   and send a chat message `Gerando currículo, plano de estudos e projeto para <title> — <company>…`.
   The title and company come from the posting, fall back to the job id, and are HTML-escaped as in
   `JobMessage`.
-- If `getUpdates` fails (HTTP error, timeout, `ok=false`), then the system shall log a WARN line
+- [x] If `getUpdates` fails (HTTP error, timeout, `ok=false`), then the system shall log a WARN line
   without the token, wait at least 5 seconds, and keep polling.
-- When the application shuts down, the polling shall stop without an error stack trace.
+- [x] When the application shuts down, the polling shall stop without an error stack trace.
 
 ### Generation
-- When an authorized tap arrives for a job with no saved application, the system shall fetch the
+- [x] When an authorized tap arrives for a job with no saved application, the system shall fetch the
   posting's detail page, score it with `PostingScorer`, and generate with the Claude CLI:
   1. a **tailored résumé** built from the base résumé,
   2. a **study plan** in Brazilian Portuguese that fits `profile.yml` `studyPlan` (same rules as
@@ -84,59 +84,59 @@ nothing.
      the posting's missing skills (or, with none missing, the skills it emphasizes most). It has
      name, problem it solves, stack, scope/features, what each part demonstrates, and 3–5 talking
      points for discussing it with the recruiter.
-- The tailored résumé shall be written in the language of the posting's description (English
+- [x] The tailored résumé shall be written in the language of the posting's description (English
   posting → English résumé; otherwise Brazilian Portuguese).
-- The tailored résumé shall reorder and reword the base résumé's content toward the posting's
+- [x] The tailored résumé shall reorder and reword the base résumé's content toward the posting's
   keywords, and shall keep the base résumé's name and contact data unchanged.
-- The tailored résumé shall list, as normal entries (no "studying"/"in progress" label), the
+- [x] The tailored résumé shall list, as normal entries (no "studying"/"in progress" label), the
   posting's missing skills covered by the study plan, and the project from `projeto.md` in the
   projects section.
-- The project entry in the résumé shall carry only the current year (e.g. `2026`) as its date: no
+- [x] The project entry in the résumé shall carry only the current year (e.g. `2026`) as its date: no
   month, no completion date.
-- The tailored résumé shall never add an employer, job title, employment date, degree,
+- [x] The tailored résumé shall never add an employer, job title, employment date, degree,
   certification or metric that is not in the base résumé.
-- The résumé shall be an ATS-friendly `.docx`: single column, no tables, text boxes, images,
+- [x] The résumé shall be an ATS-friendly `.docx`: single column, no tables, text boxes, images,
   headers/footers or columns, with standard section headings and text that is selectable and
   extractable.
 
 ### Delivery and storage
-- When generation succeeds, the system shall first write `curriculo.docx`, `plano-de-estudos.md` and
+- [x] When generation succeeds, the system shall first write `curriculo.docx`, `plano-de-estudos.md` and
   `projeto.md` to `<applications-dir>/<jobId>/`, then record the application (job id, title,
   company, url, generated-at timestamp) in the SQLite database at `alerts.db-path`.
-- When the files are saved, the system shall send them to `TELEGRAM_CHAT_ID` with `sendDocument`,
+- [x] When the files are saved, the system shall send them to `TELEGRAM_CHAT_ID` with `sendDocument`,
   in this order: résumé, study plan, project. The résumé is sent as
   `curriculo-<company-slug>-<jobId>.docx`, and its caption is the posting's title, company and URL.
-- When an authorized tap arrives for a job whose application is already saved, the system shall
+- [x] When an authorized tap arrives for a job whose application is already saved, the system shall
   resend the three saved files without running the Claude CLI or fetching LinkedIn.
-- If a saved application's files are missing on disk, then the system shall regenerate them as if
+- [x] If a saved application's files are missing on disk, then the system shall regenerate them as if
   no application were saved.
-- While an application is being generated for a job, if another tap for the same job arrives, then
+- [x] While an application is being generated for a job, if another tap for the same job arrives, then
   the system shall reply `Já estou gerando esse currículo, aguarde.` and not start a second
   generation.
-- If sending a document fails, then the system shall log a WARN line and keep the saved files, so
+- [x] If sending a document fails, then the system shall log a WARN line and keep the saved files, so
   the next tap resends them.
 
 ### Failure replies (chat messages, Brazilian Portuguese)
-- If LinkedIn answers 404 for the posting, then the system shall reply `Essa vaga não está mais
+- [x] If LinkedIn answers 404 for the posting, then the system shall reply `Essa vaga não está mais
   disponível no LinkedIn.` and save nothing.
-- If the detail request fails otherwise or the page has no description, then the system shall reply
+- [x] If the detail request fails otherwise or the page has no description, then the system shall reply
   `Não consegui ler a vaga no LinkedIn agora. Tente de novo mais tarde.` and save nothing.
-- If the Claude CLI is busy (all `max-concurrent-runs` slots taken), fails, times out, prints nothing,
+- [x] If the Claude CLI is busy (all `max-concurrent-runs` slots taken), fails, times out, prints nothing,
   or its output cannot be split into the three documents, then the system shall reply
   `Não consegui gerar agora (<reason>). Clique de novo mais tarde.` and save nothing. `<reason>` is
   `ocupado` when busy and `falha na geração` otherwise.
-- If writing the files fails, then the system shall reply `Não consegui salvar os arquivos.`, log the
+- [x] If writing the files fails, then the system shall reply `Não consegui salvar os arquivos.`, log the
   cause, and record nothing in SQLite.
 
 ### Configuration and startup
-- The system shall read the base résumé from a configurable path (`resume.base-path`, default
+- [x] The system shall read the base résumé from a configurable path (`resume.base-path`, default
   `./data/resume-base.md`) and save applications under `resume.applications-dir` (default
   `./data/applications`).
-- While alerts are enabled, if the base résumé file is missing or blank at startup, then the system
+- [x] While alerts are enabled, if the base résumé file is missing or blank at startup, then the system
   shall refuse to start with a message naming `resume.base-path` (or `alerts.enabled=false`), like
   `AlertSettings` does for the Telegram settings.
-- While alerts are disabled, the system shall not poll Telegram and shall not require the base résumé.
-- The README shall document the button flow, the new settings, how to create `data/resume-base.md`,
+- [x] While alerts are disabled, the system shall not poll Telegram and shall not require the base résumé.
+- [x] The README shall document the button flow, the new settings, how to create `data/resume-base.md`,
   and where applications are saved. `.env.example` shall exist with `TELEGRAM_BOT_TOKEN=` and
   `TELEGRAM_CHAT_ID=`.
 
@@ -188,3 +188,18 @@ nothing.
 - (Assumed) Missing base résumé with alerts enabled → refuse to start, consistent with how missing
   Telegram settings are handled today.
 - (Assumed) Polling and the button exist only while `alerts.enabled=true`.
+- (Implementation) One CLI run per application: the prompt asks for the three documents after fixed
+  markers (`===CURRICULO===`, `===PLANO_DE_ESTUDOS===`, `===PROJETO===`) and the output is split on
+  them. `claude-cli.timeout` keeps its 180 s default (raise it in `application.yml` if live runs time
+  out). The study-plan rules are shared with `StudyPlanPrompt`, not copied.
+- (Implementation) `Gerando…` is sent once the posting has been read (that is where title and company
+  come from). If the posting is gone or unreadable, only the failure reply is sent. A saved
+  application gets `Gerando…` too, followed by the resent files. Title and company each fall back
+  to the job id, which is shown once when both are missing.
+- (Implementation) A valid press is answered with `answerCallbackQuery` without text, on the polling
+  thread, before any work. `getUpdates` long-polls for 25 s with `allowed_updates=["callback_query"]`,
+  and after a failure it waits 5 s.
+- (Implementation) A busy CLI is told apart by `ClaudeCliBusyException`, a subclass of
+  `StudyPlanGenerationException`, so the REST study-plan endpoint keeps its `503` contract.
+- (Implementation) Resume `.docx`: Apache POI `poi-ooxml`. Headings are bold paragraphs, items are
+  `•` paragraphs, and Markdown emphasis is stripped.
