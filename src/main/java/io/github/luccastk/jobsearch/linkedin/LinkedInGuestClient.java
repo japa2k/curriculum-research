@@ -16,13 +16,14 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Fetches one page of job cards from LinkedIn's public, unauthenticated guest search endpoint.
+ * Fetches job card pages and job detail pages from LinkedIn's public, unauthenticated guest endpoints.
  * No cookies or credentials are ever sent: the JDK client has no cookie handler by default.
  */
 @Component
 public class LinkedInGuestClient {
 
     static final String SEARCH_PATH = "/jobs-guest/jobs/api/seeMoreJobPostings/search";
+    static final String DETAIL_PATH = "/jobs-guest/jobs/api/jobPosting/{id}";
 
     private static final Logger log = LoggerFactory.getLogger(LinkedInGuestClient.class);
 
@@ -42,8 +43,29 @@ public class LinkedInGuestClient {
 
     /** Returns the HTML fragment of the page starting at {@code start}; empty when LinkedIn sends no body. */
     public String fetchPage(SearchQuery query, int start) {
+        String logLabel = "search keywords=" + query.keywords()
+                + (query.location() == null ? "" : " location=" + query.location())
+                + " start=" + start;
+        return fetch(searchUri(query, start), logLabel, "start=" + start);
+    }
+
+    /** Returns the HTML fragment of one posting's detail page; empty when LinkedIn sends no body. */
+    public String fetchDetail(String jobId) {
+        URI uri = UriComponentsBuilder.fromUriString(properties.baseUrl())
+                .path(DETAIL_PATH)
+                .buildAndExpand(jobId)
+                .encode()
+                .toUri();
+        return fetch(uri, "detail jobId=" + jobId, "jobId=" + jobId);
+    }
+
+    /**
+     * @param logLabel   names the request in WARN lines
+     * @param errorLabel names it in the error reported to API clients; never caller input, which is not echoed
+     */
+    private String fetch(URI uri, String logLabel, String errorLabel) {
         try {
-            String html = restClient.get().uri(searchUri(query, start)).retrieve()
+            String html = restClient.get().uri(uri).retrieve()
                     // Spring only rejects 4xx/5xx; redirects and LinkedIn's anti-bot 999 are failures too.
                     .onStatus(status -> !status.is2xxSuccessful(), (request, response) -> {
                         throw new RestClientResponseException("Non-2xx response", response.getStatusCode(),
@@ -53,16 +75,16 @@ public class LinkedInGuestClient {
             return html == null ? "" : html;
         } catch (RestClientResponseException e) {
             int status = e.getStatusCode().value();
-            log.warn("LinkedIn page request failed: start={} status={}", start, status);
-            throw new UpstreamException("LinkedIn responded with HTTP " + status + " (start=" + start + ")", e);
+            log.warn("LinkedIn request failed: {} status={}", logLabel, status);
+            throw new UpstreamException("LinkedIn responded with HTTP " + status + " (" + errorLabel + ")", status, e);
         } catch (RestClientException e) {
             Throwable cause = e.getCause() == null ? e : e.getCause();
             String exceptionType = cause.getClass().getSimpleName();
-            log.warn("LinkedIn page request failed: start={} exception={}", start, exceptionType);
+            log.warn("LinkedIn request failed: {} exception={}", logLabel, exceptionType);
             String reason = isTimeout(cause)
                     ? "timeout after " + properties.timeout().toMillis() + " ms"
                     : "connection error (" + exceptionType + ")";
-            throw new UpstreamException("LinkedIn request failed: " + reason + " (start=" + start + ")", e);
+            throw new UpstreamException("LinkedIn request failed: " + reason + " (" + errorLabel + ")", e);
         }
     }
 

@@ -7,3 +7,13 @@ linkedin:
   user-agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
   page-delay: 1000ms
   timeout: 10s
+
+profile:
+  location: classpath:profile.yml
+
+# The local Claude Code CLI that writes study plans. The prompt goes through stdin. Job descriptions are
+# untrusted text, so the CLI runs with every tool disabled and no MCP servers.
+claude-cli:
+  command: claude
+  args: ["-p", "--output-format", "text", "--tools", "", "--strict-mcp-config", "--no-session-persistence"]
+  timeout: 180s
