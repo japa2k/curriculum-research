@@ -85,6 +85,13 @@ public class CallbackPoller implements SmartLifecycle {
                 if (!pause()) {
                     return;
                 }
+            } catch (RuntimeException e) {
+                // Anything else would end the thread while isRunning() still reports true.
+                log.warn("Telegram polling failed: {}; retrying in {} s", e.getClass().getSimpleName(),
+                        RETRY_DELAY.toSeconds());
+                if (!pause()) {
+                    return;
+                }
             }
         }
     }

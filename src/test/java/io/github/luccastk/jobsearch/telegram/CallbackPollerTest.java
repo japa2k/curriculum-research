@@ -110,6 +110,29 @@ class CallbackPollerTest {
     }
 
     @Test
+    void keepsPollingWhenAPollFailsUnexpectedly() {
+        TelegramClient failingOnce = new TelegramClient(RestClient.builder(),
+                new TelegramProperties(telegram.baseUrl(), TOKEN, CHAT_ID, Duration.ofMillis(500))) {
+            private boolean failed;
+
+            @Override
+            public List<TelegramUpdate> getUpdates(long offset, Duration longPoll) {
+                if (!failed) {
+                    failed = true;
+                    throw new IllegalStateException("unexpected");
+                }
+                return super.getUpdates(offset, longPoll);
+            }
+        };
+        stubUpdatesAt(0, callback(41, "cb-1", CHAT_ID, "resume:4242"));
+        poller = new CallbackPoller(failingOnce, CHAT_ID, handled::add, LONG_POLL);
+        poller.start();
+
+        await().atMost(Duration.ofSeconds(10)).until(() -> !handled.isEmpty());
+        assertThat(handled).containsExactly(new CallbackQuery("cb-1", CHAT_ID, "resume:4242"));
+    }
+
+    @Test
     void waitsAtLeastFiveSecondsAfterAFailedPollAndLogsWithoutTheToken(CapturedOutput output) {
         telegram.stubFor(post(urlPathEqualTo(UPDATES_PATH)).willReturn(aResponse().withStatus(502)));
 

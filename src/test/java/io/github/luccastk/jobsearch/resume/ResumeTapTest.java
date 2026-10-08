@@ -12,6 +12,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
@@ -53,6 +54,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -116,7 +118,7 @@ class ResumeTapTest {
     @Autowired
     private ResumeTapHandler handler;
 
-    @Autowired
+    @MockitoSpyBean
     private ApplicationStore store;
 
     @MockitoSpyBean
@@ -349,6 +351,19 @@ class ResumeTapTest {
         assertThat(store.find("5252")).isEmpty();
         telegram.verify(0, postRequestedFor(urlPathEqualTo(path("sendDocument"))));
         assertThat(output.getOut().lines().filter(line -> line.contains("WARN") && line.contains("5252")))
+                .isNotEmpty();
+    }
+
+    @Test
+    void repliesThatTheFilesCannotBeSavedWhenRecordingTheApplicationFails(CapturedOutput output) {
+        stubDetail("7373", "Dev", "Acme", "Java.");
+        doThrow(new DataAccessResourceFailureException("database is locked")).when(store).save(any());
+
+        tap("7373");
+
+        awaitReply("Não consegui salvar os arquivos.");
+        telegram.verify(0, postRequestedFor(urlPathEqualTo(path("sendDocument"))));
+        assertThat(output.getOut().lines().filter(line -> line.contains("WARN") && line.contains("7373")))
                 .isNotEmpty();
     }
 

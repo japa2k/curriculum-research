@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 
 /**
  * Handles a press of an alert's "generate résumé" button from the configured chat. It answers the press at once,
@@ -155,17 +156,18 @@ public class ResumeTapHandler implements Consumer<CallbackQuery>, AutoCloseable 
             return;
         }
 
-        byte[] resume = ResumeDocx.render(documents.resume());
+        byte[] resume;
+        Application application = new Application(jobId, detail.title(), detail.company(),
+                StudyPlanService.JOB_URL + jobId, clock.instant());
         try {
+            resume = ResumeDocx.render(documents.resume());
             files.write(jobId, resume, documents.studyPlan(), documents.project());
-        } catch (IOException | UncheckedIOException e) {
-            log.warn("Could not save the application files for job {}: {}", jobId, e.toString());
+            store.save(application);
+        } catch (IOException | UncheckedIOException | DataAccessException e) {
+            log.warn("Could not save the application for job {}: {}", jobId, e.toString());
             reply(SAVE_FAILED, jobId);
             return;
         }
-        Application application = new Application(jobId, detail.title(), detail.company(),
-                StudyPlanService.JOB_URL + jobId, clock.instant());
-        store.save(application);
         send(application, new ApplicationFiles.Saved(resume, documents.studyPlan().getBytes(StandardCharsets.UTF_8),
                 documents.project().getBytes(StandardCharsets.UTF_8)));
     }
