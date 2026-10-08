@@ -30,6 +30,6 @@ class ProfileStartupTest {
     private static ConfigurableApplicationContext start(String profileLocation) {
         return new SpringApplicationBuilder(JobSearchApplication.class)
                 .web(WebApplicationType.NONE)
-                .run("--profile.location=" + profileLocation);
+                .run("--profile.location=" + profileLocation, "--alerts.enabled=false");
     }
 }

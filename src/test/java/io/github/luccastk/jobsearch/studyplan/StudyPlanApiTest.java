@@ -54,6 +54,7 @@ class StudyPlanApiTest {
         registry.add("linkedin.base-url", linkedIn::baseUrl);
         registry.add("linkedin.timeout", () -> "500ms");
         registry.add("profile.location", () -> "classpath:profiles/recommendations.yml");
+        registry.add("alerts.enabled", () -> "false");
         List<String> command = FakeClaude.command("echo");
         registry.add("claude-cli.command", command::getFirst);
         for (int i = 1; i < command.size(); i++) {

@@ -1,6 +1,9 @@
 spring:
   application:
     name: job-search
+  config:
+    # Optional KEY=value file in the working directory; real environment variables take precedence.
+    import: optional:file:.env[.properties]
 
 linkedin:
   base-url: https://www.linkedin.com
@@ -18,3 +21,20 @@ claude-cli:
   args: ["-p", "--output-format", "text", "--tools", "", "--strict-mcp-config", "--no-session-persistence"]
   timeout: 180s
   max-concurrent-runs: 2
+
+alerts:
+  enabled: true
+  interval: 1h
+  db-path: ./data/jobs.db
+  # Same parameters, defaults and validation as GET /api/jobs/search.
+  searches:
+    - keywords: java
+      location: Brazil
+      postedWithin: DAY
+
+telegram:
+  base-url: https://api.telegram.org
+  # Secrets: set in .env or the environment, never here.
+  bot-token: ${TELEGRAM_BOT_TOKEN:}
+  chat-id: ${TELEGRAM_CHAT_ID:}
+  timeout: 10s

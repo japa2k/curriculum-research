@@ -61,6 +61,7 @@ class RecommendationsApiTest {
         registry.add("linkedin.page-delay", () -> PAGE_DELAY_MS + "ms");
         registry.add("linkedin.timeout", () -> "500ms");
         registry.add("profile.location", () -> "classpath:profiles/recommendations.yml");
+        registry.add("alerts.enabled", () -> "false");
     }
 
     @Autowired
