@@ -1,0 +1,49 @@
+@page {
+    size: A4;
+    margin: 16mm 18mm 16mm 18mm;
+}
+
+body {
+    font-family: Body, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: #14192e;
+}
+
+h1 {
+    font-size: 17pt;
+    color: #0a1128;
+    border-bottom: 1.2pt solid #0b9e8a;
+    padding-bottom: 2mm;
+    margin: 0 0 4mm 0;
+}
+
+h2 {
+    font-size: 13pt;
+    color: #0a1128;
+    margin: 6mm 0 2mm 0;
+}
+
+h3 {
+    font-size: 11pt;
+    color: #0b9e8a;
+    margin: 4mm 0 1.5mm 0;
+    page-break-after: avoid;
+}
+
+p {
+    margin: 0 0 2mm 0;
+}
+
+ul, ol {
+    margin: 0 0 2mm 0;
+    padding-left: 6mm;
+}
+
+li {
+    margin-bottom: 1mm;
+}
+
+a {
+    color: #0b9e8a;
+}
