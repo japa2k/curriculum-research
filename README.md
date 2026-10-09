@@ -38,6 +38,57 @@ Run a single class or method:
 
 Test reports are written to `target/surefire-reports/`.
 
+## Tailored résumé button
+
+Every alert carries a **📄 Gerar currículo** button. Pressing it makes the bot read the posting, score
+it against `profile.yml`, and ask the local Claude Code CLI for three documents, which it sends to
+the chat and saves on disk:
+
+| File                  | What it is                                                            |
+|-----------------------|-----------------------------------------------------------------------|
+| `curriculo.docx`      | Your base résumé reordered and reworded toward the posting's keywords, in the posting's language (English posting → English résumé, otherwise Portuguese). ATS-friendly: one column, no tables, images, headers or footers. Sent as `curriculo-<company>-<jobId>.docx`. |
+| `plano-de-estudos.md` | A week-by-week study plan for the skills the posting asks for that you lack, within `studyPlan` in `profile.yml`. |
+| `projeto.md`          | One portfolio project that exercises those skills, with talking points for the recruiter. |
+
+The résumé keeps your name and contact data as they are and never adds an employer, title, date,
+degree, certification or metric that is not in your base résumé. It does list the posting's missing
+skills (the ones the study plan covers) and the project as normal entries, with the project dated
+only with the current year: build them before you interview. Edit the `.docx` by hand if you want.
+
+**Creating the base résumé.** Write your résumé in Markdown at `data/resume-base.md` (relative to the
+directory you run the app from; `data/` is gitignored, so it is never committed). Use `#` for your
+name, a line with your contact data, `##` for each section and `-` for items, for example:
+
+```markdown
+# Your Name
+you@example.com | +55 11 90000-0000 | São Paulo, SP | linkedin.com/in/you
+
+## Experience
+### Backend Developer — Acme (2023–2025)
+- Built REST APIs in Java and Spring Boot
+```
+
+While alerts are enabled the app refuses to start, naming `resume.base-path`, if this file is missing
+or blank.
+
+**How a press is handled.**
+
+- The bot answers the press at once and replies `Gerando currículo, plano de estudos e projeto para
+  <title> — <company>…`. Generating takes one CLI run (up to `claude-cli.timeout`).
+- **Saved applications** go to `data/applications/<jobId>/` (the three files), plus a row in the
+  `application` table of `alerts.db-path` (job id, title, company, URL, generation time). Pressing the
+  button again for that job resends the saved files without running the CLI or calling LinkedIn; if a
+  saved file was deleted, the job is generated again. Delete the folder to regenerate on purpose.
+- Only presses from `TELEGRAM_CHAT_ID` are honored; anything from another chat is ignored and logged
+  as one WARN line.
+- A second press while a job is still generating gets `Já estou gerando esse currículo, aguarde.`
+- Failures are replied in the chat and save nothing: the posting is gone (LinkedIn 404), LinkedIn
+  could not be read, the CLI is busy (`claude-cli.max-concurrent-runs` runs already going — there is
+  no queue, press again later) or failed. If sending a file fails, the saved files stay and the next
+  press resends them.
+- Presses are read by long-polling Telegram's `getUpdates`, so no public URL or webhook is needed.
+  Do not run two copies of the app with the same bot: Telegram hands each press to only one of them.
+
 ## Configuration
 
 Settings live in `src/main/resources/application.properties`. Local secrets go in `.env`, which is git-ignored.
