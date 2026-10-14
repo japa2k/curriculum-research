@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Year;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,8 @@ public class ClaudeApplicationWriter implements ApplicationWriter {
 
     @Override
     public ApplicationDocuments write(JobPosting job, String description) {
-        String prompt = ApplicationPrompt.build(job, description, readBaseResume(), weeklyHours, maxWeeks);
+        String prompt = ApplicationPrompt.build(job, description, readBaseResume(), weeklyHours, maxWeeks,
+                Year.now().getValue());
         return parse(claude.run(prompt));
     }
 

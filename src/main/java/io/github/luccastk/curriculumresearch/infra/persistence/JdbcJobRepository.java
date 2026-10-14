@@ -10,7 +10,10 @@ import org.springframework.stereotype.Repository;
 import io.github.luccastk.curriculumresearch.domain.job.JobPosting;
 import io.github.luccastk.curriculumresearch.domain.job.JobRepository;
 
-/** Stores found jobs in the SQL {@code jobs} table and their descriptions in {@code job_descriptions}. */
+/**
+ * Stores found jobs in the SQL {@code jobs} table, their descriptions in {@code job_descriptions}
+ * and the ones never to send in {@code skipped_jobs}.
+ */
 @Repository
 public class JdbcJobRepository implements JobRepository {
     private final JdbcClient jdbc;
@@ -46,6 +49,7 @@ public class JdbcJobRepository implements JobRepository {
         return jdbc.sql("""
                 SELECT title, company, location, url FROM jobs
                 WHERE sent_at IS NULL
+                  AND url NOT IN (SELECT url FROM skipped_jobs)
                 ORDER BY found_at
                 LIMIT :limit
                 """)
@@ -59,6 +63,18 @@ public class JdbcJobRepository implements JobRepository {
         jdbc.sql("UPDATE jobs SET sent_at = :sentAt WHERE url = :url")
                 .param("sentAt", Instant.now().toString())
                 .param("url", job.url())
+                .update();
+    }
+
+    @Override
+    public void markSkipped(JobPosting job, String reason) {
+        jdbc.sql("""
+                INSERT OR REPLACE INTO skipped_jobs (url, reason, skipped_at)
+                VALUES (:url, :reason, :skippedAt)
+                """)
+                .param("url", job.url())
+                .param("reason", reason)
+                .param("skippedAt", Instant.now().toString())
                 .update();
     }
 

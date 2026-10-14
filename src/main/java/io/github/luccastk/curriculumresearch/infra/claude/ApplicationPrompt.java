@@ -14,7 +14,9 @@ final class ApplicationPrompt {
     private ApplicationPrompt() {
     }
 
-    static String build(JobPosting job, String description, String baseResume, int weeklyHours, int maxWeeks) {
+    /** @param year the only date the study plan's project carries in the résumé */
+    static String build(JobPosting job, String description, String baseResume, int weeklyHours, int maxWeeks,
+            int year) {
         return """
                 Você é um mentor de carreira para desenvolvedores. Para a vaga abaixo, escreva dois documentos:
                 um plano de estudo para eu me preparar para ela e o meu currículo adaptado a ela.
@@ -33,18 +35,28 @@ final class ApplicationPrompt {
 
                 Plano de estudo:
                 - Em português do Brasil.
-                - Comece com <h1> com o título da vaga e a empresa, e uma seção <h2>Análise</h2> que compare o que \
-                a vaga pede com o que meu currículo já mostra, listando o que eu tenho e o que me falta.
+                - Seja conciso: o plano inteiro deve caber em uma ou duas páginas A4. Prefira listas curtas a \
+                parágrafos, sem introduções, motivação ou repetições.
+                - Comece com <h1> com o título da vaga e a empresa, e uma seção <h2>Análise</h2> curta que compare \
+                o que a vaga pede com o que meu currículo já mostra: o que eu tenho e o que me falta, em poucos itens.
                 - Organize semana a semana (<h3>Semana N — tema</h3>), com no máximo %4$d semanas e %5$d horas por \
-                semana; priorize o que a vaga mais cobra e eu ainda não tenho.
-                - Para cada lacuna, inclua um exercício ou projeto prático que eu possa mostrar no GitHub.
-                - Termine com <h2>Entrevista</h2>: tópicos técnicos prováveis e como conectar minhas experiências a eles.
+                semana; cada semana com 2 a 4 itens objetivos. Cubra só as lacunas que a vaga mais cobra e eu ainda \
+                não tenho.
+                - Proponha um único projeto prático, com nome, que eu possa mostrar no GitHub e que junte as \
+                principais lacunas; as semanas devem construí-lo aos poucos. Não proponha outros projetos.
+                - Termine com <h2>Entrevista</h2>: até 5 tópicos técnicos prováveis e como conectar minhas \
+                experiências a eles, uma linha cada.
                 - Se a descrição da vaga estiver em inglês, inclua prática de inglês para entrevista.
 
                 Currículo adaptado:
                 - Escreva no idioma da descrição da vaga: em inglês se ela estiver em inglês, senão em português do Brasil.
                 - Use somente fatos do currículo base. Nunca invente empresa, cargo, data, formação, certificação, \
-                número ou tecnologia que não esteja nele.
+                número ou tecnologia que não esteja nele. A única exceção é o projeto prático do plano de estudo, \
+                descrito na regra abaixo.
+                - Em <h2>Projetos</h2>, além dos projetos do currículo base, inclua o projeto prático do plano de \
+                estudo (só ele, nenhum outro projeto novo), com o mesmo nome, as tecnologias dele e o que ele \
+                demonstra, em no máximo 3 bullets. Date-o com apenas o ano (<p class="when">%11$d</p>): sem mês, \
+                sem data de conclusão e sem rótulos como "em andamento" ou "estudando".
                 - Você pode reordenar seções, bullets e skills, reescrever frases, destacar as tecnologias e \
                 responsabilidades que a vaga pede e omitir o que for irrelevante para ela.
                 - Use as palavras-chave da vaga quando elas descrevem algo que está no currículo base (ATS).
@@ -77,6 +89,6 @@ final class ApplicationPrompt {
                 %10$s
                 </vaga>
                 """.formatted(STUDY_PLAN_MARKER, RESUME_MARKER, END_MARKER, maxWeeks, weeklyHours,
-                baseResume, job.title(), job.company(), job.location(), description);
+                baseResume, job.title(), job.company(), job.location(), description, year);
     }
 }

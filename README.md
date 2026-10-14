@@ -125,4 +125,4 @@ Setup:
 | `claude.command`          | `claude`                   | Claude Code CLI executable                |
 | `claude.timeout`          | `5m`                       | Kill the CLI after this long              |
 | `study-plan.weekly-hours` | `10`                       | Study hours per week the plan assumes     |
-| `study-plan.max-weeks`    | `8`                        | Longest plan, in weeks                    |
+| `study-plan.max-weeks`    | `4`                        | Longest plan, in weeks                    |

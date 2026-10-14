@@ -36,11 +36,16 @@ public class HtmlPdfRenderer implements DocumentRenderer {
     private static final Map<Style, String> STYLESHEETS = Map.of(
             Style.RESUME, "templates/resume.css",
             Style.STUDY_PLAN, "templates/study-plan.css");
-    // Windows fonts, so accents and symbols outside the PDF's built-in fonts still render.
+    // System fonts, so accents and symbols outside the PDF's built-in fonts still render: Arial on
+    // Windows, Liberation Sans (same metrics, package fonts-liberation) on Linux and in Docker.
+    private static final String LIBERATION = "/usr/share/fonts/truetype/liberation/";
     private static final List<Font> FONTS = List.of(
             new Font("C:/Windows/Fonts/arial.ttf", 400, FontStyle.NORMAL),
             new Font("C:/Windows/Fonts/arialbd.ttf", 700, FontStyle.NORMAL),
-            new Font("C:/Windows/Fonts/ariali.ttf", 400, FontStyle.ITALIC));
+            new Font("C:/Windows/Fonts/ariali.ttf", 400, FontStyle.ITALIC),
+            new Font(LIBERATION + "LiberationSans-Regular.ttf", 400, FontStyle.NORMAL),
+            new Font(LIBERATION + "LiberationSans-Bold.ttf", 700, FontStyle.NORMAL),
+            new Font(LIBERATION + "LiberationSans-Italic.ttf", 400, FontStyle.ITALIC));
 
     private record Font(String path, int weight, FontStyle style) {
     }

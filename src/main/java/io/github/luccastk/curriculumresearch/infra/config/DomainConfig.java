@@ -1,5 +1,7 @@
 package io.github.luccastk.curriculumresearch.infra.config;
 
+import java.time.Clock;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,5 +14,10 @@ public class DomainConfig {
     @Bean
     public JobFilter jobFilter() {
         return new JobFilter();
+    }
+
+    @Bean
+    public Clock clock() {
+        return Clock.systemDefaultZone();
     }
 }

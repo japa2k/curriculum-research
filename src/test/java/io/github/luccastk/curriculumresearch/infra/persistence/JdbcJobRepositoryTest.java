@@ -65,6 +65,18 @@ class JdbcJobRepositoryTest {
     }
 
     @Test
+    void skippedJobsAreNoLongerUnsent() {
+        JobPosting external = new JobPosting("Desenvolvedor Java", "A", "SP", "u1");
+        JobPosting pending = new JobPosting("Desenvolvedor Go", "B", "SP", "u2");
+        repository.save(external);
+        repository.save(pending);
+
+        repository.markSkipped(external, "EXTERNAL");
+
+        assertThat(repository.findUnsent(5)).containsExactly(pending);
+    }
+
+    @Test
     void storesAJobsDescription() {
         JobPosting job = new JobPosting("Desenvolvedor Java", "A", "SP", "u1");
         repository.save(job);

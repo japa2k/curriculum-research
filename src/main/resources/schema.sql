@@ -14,3 +14,10 @@ CREATE TABLE IF NOT EXISTS job_descriptions (
     description TEXT NOT NULL,
     fetched_at  TEXT NOT NULL
 );
+
+-- Jobs that will never be sent: applied to off LinkedIn (no Easy Apply), or closed.
+CREATE TABLE IF NOT EXISTS skipped_jobs (
+    url        TEXT PRIMARY KEY REFERENCES jobs (url),
+    reason     TEXT NOT NULL,
+    skipped_at TEXT NOT NULL
+);

@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -30,6 +31,8 @@ public class ClaudeCli {
     // Java only appends .exe on Windows, so an npm install's claude.cmd shim must be found by hand.
     private static final List<String> WINDOWS_EXTENSIONS = List.of(".exe", ".cmd", ".bat");
     private static final long DRAIN_SECONDS = 5;
+    // A limit notice is one line; a real answer is far longer, and may quote "limit reached" itself.
+    private static final int LIMIT_NOTICE_MAX_LENGTH = 300;
 
     private final String command;
     private final Duration timeout;
@@ -39,7 +42,11 @@ public class ClaudeCli {
         this.timeout = timeout;
     }
 
-    /** Returns the CLI's answer, trimmed; throws when it cannot start, fails, times out or answers nothing. */
+    /**
+     * Returns the CLI's answer, trimmed; throws when it cannot start, fails, times out or answers nothing,
+     * and a {@link io.github.luccastk.curriculumresearch.domain.application.UsageLimitReachedException}
+     * when the usage limit is used up.
+     */
     public String run(String prompt) {
         List<String> commandLine = new ArrayList<>();
         commandLine.add(resolve(command, File.separatorChar == '\\', System.getenv("PATH")));
@@ -47,23 +54,29 @@ public class ClaudeCli {
 
         Process process;
         try {
-            process = new ProcessBuilder(commandLine).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            process = new ProcessBuilder(commandLine).start();
         } catch (IOException e) {
             throw new ClaudeCliException("Claude CLI could not be started (" + command + "): " + e.getMessage(), e);
         }
 
         // Pumped on their own threads, so a large prompt or answer cannot block the timeout.
         CompletableFuture<String> stdout = CompletableFuture.supplyAsync(() -> readAll(process.getInputStream()));
+        CompletableFuture<String> stderr = CompletableFuture.supplyAsync(() -> readAll(process.getErrorStream()));
         CompletableFuture.runAsync(() -> writeAll(process.getOutputStream(), prompt));
         try {
             if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 kill(process);
                 throw new ClaudeCliException("Claude CLI timed out after " + timeout.toSeconds() + " s", null);
             }
+            String output = stdout.get(DRAIN_SECONDS, TimeUnit.SECONDS).trim();
             if (process.exitValue() != 0) {
+                String said = output + "\n" + stderr.get(DRAIN_SECONDS, TimeUnit.SECONDS).trim();
+                throwIfUsageLimit(said);
                 throw new ClaudeCliException("Claude CLI exited with code " + process.exitValue(), null);
             }
-            String output = stdout.get(DRAIN_SECONDS, TimeUnit.SECONDS).trim();
+            if (output.length() <= LIMIT_NOTICE_MAX_LENGTH) {
+                throwIfUsageLimit(output);
+            }
             if (output.isEmpty()) {
                 throw new ClaudeCliException("Claude CLI returned empty output", null);
             }
@@ -76,6 +89,12 @@ public class ClaudeCli {
             kill(process);
             throw new ClaudeCliException("Claude CLI output could not be read", e);
         }
+    }
+
+    private static void throwIfUsageLimit(String said) {
+        ClaudeUsageLimit.in(said, ZonedDateTime.now()).ifPresent(limit -> {
+            throw limit;
+        });
     }
 
     /** The file a bare command name runs, searched on the PATH the way a Windows shell does. */

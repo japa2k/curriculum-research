@@ -11,10 +11,13 @@ public interface JobRepository {
 
     List<JobPosting> findAll();
 
-    /** The jobs not sent yet, oldest found first. */
+    /** The jobs not sent nor skipped yet, oldest found first. */
     List<JobPosting> findUnsent(int limit);
 
     void markSent(JobPosting job);
+
+    /** Keeps the job out of {@link #findUnsent} for good, without sending it. */
+    void markSkipped(JobPosting job, String reason);
 
     /** Empty until {@link #saveDescription} stores the posting's description. */
     Optional<String> findDescription(JobPosting job);

@@ -2,6 +2,9 @@ package io.github.luccastk.curriculumresearch.api.telegram;
 
 import java.nio.file.Path;
 import java.text.Normalizer;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -20,13 +23,16 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import io.github.luccastk.curriculumresearch.api.telegram.commands.Reply;
 import io.github.luccastk.curriculumresearch.domain.application.ApplicationKit;
+import io.github.luccastk.curriculumresearch.domain.application.UsageLimitNotifier;
 import io.github.luccastk.curriculumresearch.domain.job.JobNotifier;
 import io.github.luccastk.curriculumresearch.domain.job.JobPosting;
 import io.github.luccastk.curriculumresearch.infra.scheduling.JobSearchFinished;
 
 @Component
 public class Bot
-        extends TelegramLongPollingBot implements JobNotifier {
+        extends TelegramLongPollingBot implements JobNotifier, UsageLimitNotifier {
+    private static final DateTimeFormatter RESET_TIME = DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm");
+
     private final String token;
     private final String username;
     private final String chatId;
@@ -92,6 +98,24 @@ public class Bot
         String slug = slug(job.company());
         sendDocument(kit.get().resume(), "curriculo-" + slug + ".pdf", "Currículo para " + job.title());
         sendDocument(kit.get().studyPlan(), "plano-de-estudos-" + slug + ".pdf", "Plano de estudo para " + job.title());
+    }
+
+    @Override
+    public void limitReached(Optional<Instant> resetsAt) {
+        sendText(limitReachedText(resetsAt, ZoneId.systemDefault()));
+    }
+
+    @Override
+    public void limitLifted() {
+        sendText("O Claude voltou. O envio das vagas continua.");
+    }
+
+    static String limitReachedText(Optional<Instant> resetsAt, ZoneId zone) {
+        String when = resetsAt
+                .map(at -> "Ele volta em " + RESET_TIME.format(at.atZone(zone)) + ".")
+                .orElse("Ele não disse quando volta.");
+        return "O Claude bateu o limite de uso. " + when
+                + " As vagas ficam na fila até lá, e eu aviso aqui quando ele voltar.";
     }
 
     @Override

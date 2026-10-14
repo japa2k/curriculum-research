@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    container_name: curriculum-research
+    restart: unless-stopped
+    # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID and CLAUDE_CODE_OAUTH_TOKEN (from `claude setup-token`).
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      # Base résumé and the generated PDFs.
+      - ./data:/app/data
+      # SQLite database, shared with runs outside Docker.
+      - ./jobs.db:/app/jobs.db
